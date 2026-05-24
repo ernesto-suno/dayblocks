@@ -24,13 +24,17 @@ export function useCalendar() {
     const { workDayStart = '07:00', workDayEnd = '22:00' } = settings
     const dateStr = format(date, 'yyyy-MM-dd')
 
-    const [startH, startM] = workDayStart.split(':').map(Number)
     const [endH, endM] = workDayEnd.split(':').map(Number)
 
-    const dayStart = new Date(`${dateStr}T${workDayStart}:00`)
+    const configuredStart = new Date(`${dateStr}T${workDayStart}:00`)
     const dayEnd = new Date(`${dateStr}T${workDayEnd}:00`)
 
-    const totalMinutes = (endH * 60 + endM) - (startH * 60 + startM)
+    // For today, never count time that has already passed
+    const now = new Date()
+    const isToday = dateStr === format(now, 'yyyy-MM-dd')
+    const dayStart = isToday && now > configuredStart ? now : configuredStart
+
+    const totalMinutes = Math.max(0, Math.floor((dayEnd - dayStart) / 60000))
 
     // Only look at non-DayBlocks events
     const realEvents = state.calendarEvents.filter(e => {
