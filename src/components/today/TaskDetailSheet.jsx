@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import BottomSheet from '../shared/BottomSheet'
-import Button from '../shared/Button'
 import ScheduleSheet from '../shared/ScheduleSheet'
 import { useApp } from '../../store/AppContext'
 import { useTasks } from '../../hooks/useTasks'
@@ -9,6 +8,7 @@ export default function TaskDetailSheet({ isOpen, onClose, task, onStartFocus })
   const { openSheet } = useApp()
   const { completeTask, unscheduleTask } = useTasks()
   const [rescheduleOpen, setRescheduleOpen] = useState(false)
+  const [loading, setLoading] = useState(null)
 
   if (!task) return null
 
@@ -16,54 +16,43 @@ export default function TaskDetailSheet({ isOpen, onClose, task, onStartFocus })
   const totalSubtasks = (task.subtasks || []).length
 
   async function handleComplete() {
+    setLoading('complete')
     await completeTask(task)
+    setLoading(null)
     onClose()
   }
 
   async function handleMoveToBacklog() {
+    setLoading('backlog')
     await unscheduleTask(task)
+    setLoading(null)
     onClose()
   }
 
   return (
     <>
-      <BottomSheet isOpen={isOpen && !rescheduleOpen} onClose={onClose} title={task.title}>
-        <div className="px-5 pb-4 space-y-4">
+      <BottomSheet isOpen={isOpen && !rescheduleOpen} onClose={onClose}>
+        <div className="px-5 pb-6 space-y-3">
 
-          {/* Time + priority pills */}
-          <div className="flex items-center gap-2 flex-wrap">
+          {/* Task title + time */}
+          <div className="pt-2 pb-1">
+            <h2 className="text-xl font-bold text-[#f4f4f5] leading-snug">{task.title}</h2>
             {task.scheduled_start_time && (
-              <button
-                onClick={() => setRescheduleOpen(true)}
-                className="flex items-center gap-1.5 bg-[#3b82f6]/10 text-[#3b82f6] px-3 py-1.5 rounded-full text-xs font-medium active:bg-[#3b82f6]/20"
-              >
-                🕐 {formatTime(task.scheduled_start_time)} · {task.estimated_minutes || 30} min
-                <span className="text-[#3b82f6]/60">· tap to move</span>
-              </button>
+              <p className="text-[#71717a] text-sm mt-1">
+                {formatTime(task.scheduled_start_time)} · {task.estimated_minutes || 30} min
+              </p>
             )}
-            <span className={`text-xs px-2.5 py-1 rounded-full ${
-              task.priority === 'high' ? 'bg-[#ef4444]/10 text-[#ef4444]'
-              : task.priority === 'low' ? 'bg-[#3f3f46] text-[#71717a]'
-              : 'bg-[#3b82f6]/10 text-[#3b82f6]'
-            }`}>
-              {task.priority}
-            </span>
           </div>
 
-          {/* Notes */}
           {task.notes && (
-            <p className="text-[#a1a1aa] text-sm leading-relaxed">{task.notes}</p>
+            <p className="text-[#a1a1aa] text-sm leading-relaxed pb-1">{task.notes}</p>
           )}
 
-          {/* Subtasks */}
           {totalSubtasks > 0 && (
-            <div className="space-y-2">
-              <div className="text-xs text-[#71717a] font-medium uppercase tracking-wider">
-                Subtasks {completedSubtasks}/{totalSubtasks}
-              </div>
+            <div className="bg-[#242428] rounded-2xl p-3 space-y-2">
               {task.subtasks.map(sub => (
-                <div key={sub.id} className="flex items-center gap-2.5 py-1">
-                  <div className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${
+                <div key={sub.id} className="flex items-center gap-2.5">
+                  <div className={`w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center ${
                     sub.completed ? 'bg-[#22c55e] border-[#22c55e]' : 'border-[#3f3f46]'
                   }`}>
                     {sub.completed && <span className="text-white text-[10px]">✓</span>}
@@ -76,42 +65,64 @@ export default function TaskDetailSheet({ isOpen, onClose, task, onStartFocus })
             </div>
           )}
 
-          {/* Primary actions */}
-          <Button fullWidth size="lg"
-            onClick={() => { onClose(); setTimeout(() => onStartFocus(task), 300) }}
+          {/* ── The two actions the user needs most ── */}
+
+          {/* 1. Change time / reschedule */}
+          <button
+            onClick={() => setRescheduleOpen(true)}
+            className="w-full bg-[#3b82f6]/10 border border-[#3b82f6]/30 rounded-2xl p-4 flex items-center gap-3 active:bg-[#3b82f6]/20 text-left"
           >
-            ▶ Start Focus Session
-          </Button>
+            <span className="text-2xl">📅</span>
+            <div>
+              <p className="text-[#3b82f6] font-semibold text-sm">Change Time</p>
+              <p className="text-[#71717a] text-xs mt-0.5">Move it to a different slot today or another day</p>
+            </div>
+            <svg className="ml-auto text-[#3b82f6]/50 flex-shrink-0" width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M6 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+            </svg>
+          </button>
 
-          <div className="grid grid-cols-2 gap-2">
-            <Button variant="success" fullWidth onClick={handleComplete}>
-              ✓ Mark Complete
-            </Button>
-            <Button variant="secondary" fullWidth onClick={() => setRescheduleOpen(true)}>
-              📅 Change Time
-            </Button>
-          </div>
+          {/* 2. Back to backlog */}
+          <button
+            onClick={handleMoveToBacklog}
+            disabled={loading === 'backlog'}
+            className="w-full bg-[#242428] rounded-2xl p-4 flex items-center gap-3 active:bg-[#2e2e34] text-left"
+          >
+            <span className="text-2xl">↩</span>
+            <div>
+              <p className="text-[#f4f4f5] font-semibold text-sm">
+                {loading === 'backlog' ? 'Moving…' : 'Send to Backlog'}
+              </p>
+              <p className="text-[#71717a] text-xs mt-0.5">Not getting to it today — remove from calendar</p>
+            </div>
+          </button>
 
-          <div className="grid grid-cols-2 gap-2">
-            <Button variant="ghost" fullWidth
-              onClick={() => { onClose(); setTimeout(() => openSheet('edit', task), 300) }}
+          {/* ── Secondary actions ── */}
+          <div className="grid grid-cols-3 gap-2 pt-1">
+            <button
+              onClick={() => { onClose(); setTimeout(() => onStartFocus(task), 300) }}
+              className="h-12 bg-[#3b82f6] text-white rounded-2xl text-sm font-semibold active:bg-[#2563eb] flex items-center justify-center gap-1"
             >
-              Edit
-            </Button>
-            <Button variant="secondary" fullWidth onClick={handleMoveToBacklog}>
-              ↩ Backlog
-            </Button>
+              ▶ Start
+            </button>
+            <button
+              onClick={handleComplete}
+              disabled={loading === 'complete'}
+              className="h-12 bg-[#22c55e]/10 text-[#22c55e] rounded-2xl text-sm font-medium active:bg-[#22c55e]/20 flex items-center justify-center"
+            >
+              {loading === 'complete' ? '…' : '✓ Done'}
+            </button>
+            <button
+              onClick={() => { onClose(); setTimeout(() => openSheet('aiTools', task), 300) }}
+              className="h-12 bg-[#a855f7]/10 text-[#a855f7] rounded-2xl text-sm font-medium active:bg-[#a855f7]/20 flex items-center justify-center"
+            >
+              ✦ AI
+            </button>
           </div>
 
-          <Button variant="yellow" fullWidth
-            onClick={() => { onClose(); setTimeout(() => openSheet('aiTools', task), 300) }}
-          >
-            ✦ AI Tools
-          </Button>
         </div>
       </BottomSheet>
 
-      {/* Reschedule sheet — sits on top */}
       <ScheduleSheet
         isOpen={rescheduleOpen}
         onClose={() => { setRescheduleOpen(false); onClose() }}
