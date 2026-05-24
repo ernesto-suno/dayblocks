@@ -5,6 +5,7 @@ import { useCalendar } from '../hooks/useCalendar'
 import { useApp } from '../store/AppContext'
 import LoadingSpinner from '../components/shared/LoadingSpinner'
 import ScheduleSheet from '../components/shared/ScheduleSheet'
+import QuickAddSheet from '../components/shared/QuickAddSheet'
 import Button from '../components/shared/Button'
 
 export default function PlanningView() {
@@ -13,6 +14,7 @@ export default function PlanningView() {
   const { state, dispatch } = useApp()
   const [scheduleTarget, setScheduleTarget] = useState(null)
   const [expandedId, setExpandedId] = useState(null)
+  const [addOpen, setAddOpen] = useState(false)
 
   const today = new Date()
   const todayStr = format(today, 'yyyy-MM-dd')
@@ -64,9 +66,17 @@ export default function PlanningView() {
       <div className="px-5 pt-4 pb-3 flex-shrink-0">
         <div className="flex items-center justify-between mb-1">
           <h1 className="text-2xl font-bold text-[#f4f4f5]">Plan My Day</h1>
-          <button onClick={handleDonePlanning} className="text-[#3b82f6] text-sm font-medium touch-target">
-            Done
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setAddOpen(true)}
+              className="text-[#3b82f6] text-sm font-medium touch-target flex items-center gap-1"
+            >
+              + New Task
+            </button>
+            <button onClick={handleDonePlanning} className="text-[#a1a1aa] text-sm font-medium touch-target">
+              Done
+            </button>
+          </div>
         </div>
         <p className="text-sm text-[#71717a]">{format(today, 'EEEE, MMMM d')}</p>
       </div>
@@ -262,6 +272,12 @@ export default function PlanningView() {
         isOpen={!!scheduleTarget}
         onClose={() => setScheduleTarget(null)}
         task={scheduleTarget}
+      />
+
+      <QuickAddSheet
+        isOpen={addOpen}
+        onClose={() => setAddOpen(false)}
+        defaultDate={todayStr}
       />
     </div>
   )

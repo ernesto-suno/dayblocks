@@ -14,7 +14,10 @@ export default function SettingsView() {
   const s = state.settings
 
   function update(key, value) {
+    const updated = { ...state.settings, [key]: value }
     dispatch({ type: 'UPDATE_SETTINGS', payload: { [key]: value } })
+    // Persist settings so graph.js can read timezone without React context
+    try { localStorage.setItem('dayblocks_settings', JSON.stringify(updated)) } catch {}
   }
 
   async function clearCompleted() {
@@ -83,6 +86,42 @@ export default function SettingsView() {
                 className="bg-[#242428] rounded-xl px-3 py-2 text-[#f4f4f5] outline-none text-sm"
               />
             </Row>
+          </div>
+        </Section>
+
+        {/* Timezone */}
+        <Section title="Timezone">
+          <div className="bg-[#1a1a1e] rounded-2xl p-4">
+            <Row label="Your timezone">
+              <select
+                value={s.timezone}
+                onChange={e => update('timezone', e.target.value)}
+                className="bg-[#242428] rounded-xl px-3 py-2 text-[#f4f4f5] outline-none text-sm max-w-[200px]"
+              >
+                {[
+                  'America/New_York',
+                  'America/Chicago',
+                  'America/Denver',
+                  'America/Los_Angeles',
+                  'America/Phoenix',
+                  'America/Anchorage',
+                  'Pacific/Honolulu',
+                  'Europe/London',
+                  'Europe/Paris',
+                  'Europe/Madrid',
+                  'Europe/Berlin',
+                  'Asia/Dubai',
+                  'Asia/Singapore',
+                  'Asia/Tokyo',
+                  'Australia/Sydney',
+                ].map(tz => (
+                  <option key={tz} value={tz}>{tz.replace('_', ' ')}</option>
+                ))}
+              </select>
+            </Row>
+            <p className="text-[#71717a] text-xs mt-2 ml-0">
+              Auto-detected: {Intl.DateTimeFormat().resolvedOptions().timeZone}
+            </p>
           </div>
         </Section>
 

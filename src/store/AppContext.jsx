@@ -29,6 +29,7 @@ const initialState = {
     defaultTaskDuration: 30,
     focusCheckInInterval: 10,
     planningReminderTime: '08:00',
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/New_York',
   },
 
   // User info
