@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { planningChat } from '../../lib/claude'
 import { useTasks } from '../../hooks/useTasks'
-import ScheduleSheet from '../shared/ScheduleSheet'
+import VisualScheduleSheet from '../shared/VisualScheduleSheet'
 
 // Parse Claude's response for SUGGEST lines
 function parseSuggestions(text) {
@@ -268,7 +268,7 @@ export default function AIPlanningChat({ onClose, freeMinutes, freeHours, calend
       </div>
 
       {/* Schedule sheet from chat suggestion */}
-      <ScheduleSheet
+      <VisualScheduleSheet
         isOpen={!!scheduleTarget}
         onClose={() => setScheduleTarget(null)}
         task={scheduleTarget ? { ...scheduleTarget, scheduled_start_time: scheduleTime } : null}

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import BottomSheet from '../shared/BottomSheet'
-import ScheduleSheet from '../shared/ScheduleSheet'
+import VisualScheduleSheet from '../shared/VisualScheduleSheet'
 import { useApp } from '../../store/AppContext'
 import { useTasks } from '../../hooks/useTasks'
 
@@ -123,7 +123,7 @@ export default function TaskDetailSheet({ isOpen, onClose, task, onStartFocus })
         </div>
       </BottomSheet>
 
-      <ScheduleSheet
+      <VisualScheduleSheet
         isOpen={rescheduleOpen}
         onClose={() => { setRescheduleOpen(false); onClose() }}
         task={task}

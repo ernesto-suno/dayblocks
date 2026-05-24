@@ -200,6 +200,12 @@ export default function TaskCard({ task, onComplete, onDelete, onSchedule, onSta
               >
                 Edit
               </button>
+              <button
+                onClick={() => onDelete?.(task)}
+                className="h-10 px-3 bg-[#ef4444]/10 text-[#ef4444] rounded-xl text-sm active:bg-[#ef4444]/20"
+              >
+                Delete
+              </button>
             </div>
           </div>
         )}

@@ -4,7 +4,7 @@ import { useTasks } from '../hooks/useTasks'
 import { useApp } from '../store/AppContext'
 import TaskCard from '../components/shared/TaskCard'
 import QuickAddSheet from '../components/shared/QuickAddSheet'
-import ScheduleSheet from '../components/shared/ScheduleSheet'
+import VisualScheduleSheet from '../components/shared/VisualScheduleSheet'
 import AIToolsSheet from '../components/ai-tools/AIToolsSheet'
 import EditTaskSheet from '../components/backlog/EditTaskSheet'
 import FocusMode from './FocusMode'
@@ -228,7 +228,7 @@ export default function BacklogView() {
 
       {/* Sheets */}
       <QuickAddSheet isOpen={addOpen} onClose={() => setAddOpen(false)} />
-      <ScheduleSheet isOpen={!!scheduleTask} onClose={() => setScheduleTask(null)} task={scheduleTask} />
+      <VisualScheduleSheet isOpen={!!scheduleTask} onClose={() => setScheduleTask(null)} task={scheduleTask} />
       <AIToolsSheet isOpen={!!aiTask} onClose={() => setAiTask(null)} task={aiTask} />
       <EditTaskSheet isOpen={!!editTask} onClose={() => setEditTask(null)} task={editTask} />
     </div>

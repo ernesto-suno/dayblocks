@@ -4,7 +4,7 @@ import { useTasks } from '../hooks/useTasks'
 import { useCalendar } from '../hooks/useCalendar'
 import { useApp } from '../store/AppContext'
 import LoadingSpinner from '../components/shared/LoadingSpinner'
-import ScheduleSheet from '../components/shared/ScheduleSheet'
+import VisualScheduleSheet from '../components/shared/VisualScheduleSheet'
 import QuickAddSheet from '../components/shared/QuickAddSheet'
 import Button from '../components/shared/Button'
 import AIPlanningChat from '../components/planning/AIPlanningChat'
@@ -276,7 +276,7 @@ export default function PlanningView() {
         </Button>
       </div>
 
-      <ScheduleSheet
+      <VisualScheduleSheet
         isOpen={!!scheduleTarget}
         onClose={() => setScheduleTarget(null)}
         task={scheduleTarget}
