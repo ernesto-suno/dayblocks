@@ -7,6 +7,7 @@ import LoadingSpinner from '../components/shared/LoadingSpinner'
 import ScheduleSheet from '../components/shared/ScheduleSheet'
 import QuickAddSheet from '../components/shared/QuickAddSheet'
 import Button from '../components/shared/Button'
+import AIPlanningChat from '../components/planning/AIPlanningChat'
 
 export default function PlanningView() {
   const { tasks, unscheduleTask, completeTask } = useTasks()
@@ -15,6 +16,7 @@ export default function PlanningView() {
   const [scheduleTarget, setScheduleTarget] = useState(null)
   const [expandedId, setExpandedId] = useState(null)
   const [addOpen, setAddOpen] = useState(false)
+  const [chatOpen, setChatOpen] = useState(false)
 
   const today = new Date()
   const todayStr = format(today, 'yyyy-MM-dd')
@@ -68,10 +70,16 @@ export default function PlanningView() {
           <h1 className="text-2xl font-bold text-[#f4f4f5]">Plan My Day</h1>
           <div className="flex items-center gap-3">
             <button
+              onClick={() => setChatOpen(true)}
+              className="text-[#a855f7] text-sm font-medium touch-target flex items-center gap-1"
+            >
+              ✦ AI Chat
+            </button>
+            <button
               onClick={() => setAddOpen(true)}
               className="text-[#3b82f6] text-sm font-medium touch-target flex items-center gap-1"
             >
-              + New Task
+              + New
             </button>
             <button onClick={handleDonePlanning} className="text-[#a1a1aa] text-sm font-medium touch-target">
               Done
@@ -279,6 +287,16 @@ export default function PlanningView() {
         onClose={() => setAddOpen(false)}
         defaultDate={todayStr}
       />
+
+      {chatOpen && (
+        <AIPlanningChat
+          onClose={() => setChatOpen(false)}
+          freeMinutes={freeSlots.freeMinutes}
+          freeHours={freeSlots.freeHours}
+          calendarEvents={calendarEvents}
+          settings={state.settings}
+        />
+      )}
     </div>
   )
 }

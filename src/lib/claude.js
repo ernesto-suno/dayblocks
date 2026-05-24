@@ -1,7 +1,5 @@
 import { supabase } from './supabase'
 
-// All Claude calls go through a Supabase Edge Function to keep the API key server-side.
-
 async function callClaude(prompt, systemPrompt, maxTokens = 500) {
   const { data, error } = await supabase.functions.invoke('claude-proxy', {
     body: { prompt, systemPrompt, maxTokens },
@@ -21,7 +19,6 @@ Return as a numbered list, max 8 steps. No intro, no outro — just the steps.`
   const prompt = `Task: ${title}${notes ? `\nNotes: ${notes}` : ''}`
   const content = await callClaude(prompt, system, 400)
 
-  // Parse numbered list into subtask objects
   const lines = content
     .split('\n')
     .filter(l => /^\d+\./.test(l.trim()))
@@ -42,7 +39,7 @@ Format: Task: [title]\nWhy: [one sentence]`
 
   const taskList = backlogTasks
     .slice(0, 15)
-    .map(t => `- "${t.title}" (${t.estimated_minutes || '?'} min, priority: ${t.priority})`)
+    .map(t => `- "${t.title}" (${t.estimated_minutes || '?'} min, priority: ${t.priority}, category: ${t.category || 'uncategorized'})`)
     .join('\n')
 
   const prompt = `Available gap: ${gapMinutes} minutes\n\nBacklog:\n${taskList}`
@@ -89,6 +86,19 @@ ${accuracyNote}`
   }
 }
 
+// ─── Auto-categorize a new task ────────────────────────────────────────────
+
+export async function suggestCategory(title, notes, existingCategories = []) {
+  const system = `You are a productivity assistant. Categorize this task into ONE short category label (1-2 words max, title case).
+If it fits an existing category, use that exact label. Otherwise create a new one.
+Existing categories: ${existingCategories.length ? existingCategories.join(', ') : 'none yet'}
+Reply with ONLY the category label. No explanation, no punctuation.`
+
+  const prompt = `Task: ${title}${notes ? `\nNotes: ${notes}` : ''}`
+  const content = await callClaude(prompt, system, 20)
+  return content.trim().replace(/[".]/g, '')
+}
+
 // ─── Focus Mode check-ins ─────────────────────────────────────────────────
 
 export async function focusCheckIn(taskTitle, minutesElapsed, userNote) {
@@ -100,4 +110,41 @@ Time elapsed: ${minutesElapsed} minutes
 User says: ${userNote || '(no response — just checking in)'}`
 
   return callClaude(prompt, system, 150)
+}
+
+// ─── AI Morning Planning Chat ──────────────────────────────────────────────
+
+export async function planningChat(userMessage, context, history = []) {
+  const { freeMinutes, freeHours, backlogTasks, todayMeetings, focusCategory } = context
+
+  const system = `You are a calm, direct planning coach for someone with an ADHD-style brain.
+You help them plan their day at the start of each morning.
+
+Today's context:
+- Free time available: ${freeHours}h (${freeMinutes} minutes)
+- Meetings today: ${todayMeetings.length ? todayMeetings.map(m => `${m.subject} (${m.duration}min)`).join(', ') : 'none'}
+- Focus area: ${focusCategory || 'not specified yet'}
+
+Backlog tasks (prioritized):
+${backlogTasks.slice(0, 20).map(t =>
+  `- [${t.category || 'General'}] "${t.title}" (${t.estimated_minutes || 30}min, ${t.priority} priority${t.is_recurring ? ', recurring' : ''})`
+).join('\n')}
+
+Rules:
+- Be warm but brief. Max 3-4 sentences per reply.
+- When suggesting tasks to schedule, format each suggestion as: SUGGEST: "[task title]" at [time] for [duration]min
+- When the user approves a suggestion, say SCHEDULED: "[task title]"
+- Ask what area they want to focus on if they haven't said
+- Don't overwhelm — suggest 3-4 tasks max at a time
+- Respect their available time — don't overload their day
+- If they're already over capacity, gently flag it`
+
+  const messages = [
+    ...history.map(h => ({ role: h.role, content: h.content })),
+    { role: 'user', content: userMessage },
+  ]
+
+  const prompt = messages.map(m => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`).join('\n\n')
+
+  return callClaude(prompt, system, 400)
 }

@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { format, startOfWeek, endOfWeek, isWithinInterval, parseISO } from 'date-fns'
-import { AnimatePresence, motion } from 'framer-motion'
 import { useTasks } from '../hooks/useTasks'
 import { useApp } from '../store/AppContext'
 import TaskCard from '../components/shared/TaskCard'
@@ -24,9 +23,17 @@ export default function BacklogView() {
   const [aiTask, setAiTask] = useState(null)
   const [editTask, setEditTask] = useState(null)
   const [focusTask, setFocusTask] = useState(null)
-  const [filter, setFilter] = useState('all') // 'all' | 'high' | 'medium' | 'low'
+  const [priorityFilter, setPriorityFilter] = useState('all') // 'all' | 'high' | 'medium' | 'low'
+  const [categoryFilter, setCategoryFilter] = useState('all') // 'all' | any category name
 
   const backlog = tasks.filter(t => t.status === 'backlog')
+
+  // Extract unique categories from all backlog tasks
+  const allCategories = [...new Set(backlog.map(t => t.category).filter(Boolean))].sort()
+
+  // Separate recurring from regular
+  const recurringTasks = backlog.filter(t => t.is_recurring)
+  const regularTasks = backlog.filter(t => !t.is_recurring)
 
   const todayStr = format(new Date(), 'yyyy-MM-dd')
   const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 })
@@ -42,18 +49,24 @@ export default function BacklogView() {
     return 'someday'
   }
 
+  function applyFilters(taskList) {
+    return taskList.filter(t => {
+      const matchesPriority = priorityFilter === 'all' || t.priority === priorityFilter
+      const matchesCategory = categoryFilter === 'all' || t.category === categoryFilter
+      return matchesPriority && matchesCategory
+    })
+  }
+
   const grouped = {
-    today: backlog.filter(t => categorize(t) === 'today'),
-    week: backlog.filter(t => categorize(t) === 'week'),
-    someday: backlog.filter(t => categorize(t) === 'someday'),
+    today: regularTasks.filter(t => categorize(t) === 'today'),
+    week: regularTasks.filter(t => categorize(t) === 'week'),
+    someday: regularTasks.filter(t => categorize(t) === 'someday'),
   }
 
   const filteredGrouped = Object.fromEntries(
-    Object.entries(grouped).map(([k, v]) => [
-      k,
-      filter === 'all' ? v : v.filter(t => t.priority === filter),
-    ])
+    Object.entries(grouped).map(([k, v]) => [k, applyFilters(v)])
   )
+  const filteredRecurring = applyFilters(recurringTasks)
 
   async function handleComplete(task) {
     await completeTask(task)
@@ -79,18 +92,18 @@ export default function BacklogView() {
         </div>
 
         {/* Priority filter */}
-        <div className="flex gap-2">
+        <div className="flex gap-2 mb-2">
           {[
             { id: 'all', label: 'All' },
             { id: 'high', label: '● High' },
-            { id: 'medium', label: '● Medium' },
+            { id: 'medium', label: '● Med' },
             { id: 'low', label: '● Low' },
           ].map(f => (
             <button
               key={f.id}
-              onClick={() => setFilter(f.id)}
+              onClick={() => setPriorityFilter(f.id)}
               className={`px-3 h-8 rounded-full text-xs transition-all ${
-                filter === f.id
+                priorityFilter === f.id
                   ? f.id === 'high' ? 'bg-[#ef4444]/20 text-[#ef4444]'
                     : f.id === 'medium' ? 'bg-[#3b82f6]/20 text-[#3b82f6]'
                     : f.id === 'low' ? 'bg-[#3f3f46] text-[#a1a1aa]'
@@ -102,6 +115,31 @@ export default function BacklogView() {
             </button>
           ))}
         </div>
+
+        {/* Category filter — only shown if categories exist */}
+        {allCategories.length > 0 && (
+          <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+            <button
+              onClick={() => setCategoryFilter('all')}
+              className={`px-3 h-7 rounded-full text-xs whitespace-nowrap flex-shrink-0 transition-all ${
+                categoryFilter === 'all' ? 'bg-[#a855f7]/20 text-[#a855f7]' : 'bg-[#1a1a1e] text-[#71717a]'
+              }`}
+            >
+              All categories
+            </button>
+            {allCategories.map(cat => (
+              <button
+                key={cat}
+                onClick={() => setCategoryFilter(categoryFilter === cat ? 'all' : cat)}
+                className={`px-3 h-7 rounded-full text-xs whitespace-nowrap flex-shrink-0 transition-all ${
+                  categoryFilter === cat ? 'bg-[#a855f7]/20 text-[#a855f7]' : 'bg-[#1a1a1e] text-[#71717a]'
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Task list */}
@@ -113,18 +151,15 @@ export default function BacklogView() {
             <p className="text-[#71717a] text-sm mt-1">Add tasks to get started.</p>
           </div>
         ) : (
-          SECTIONS.map(section => {
-            const sectionTasks = filteredGrouped[section.id] || []
-            if (sectionTasks.length === 0) return null
-            return (
-              <div key={section.id} className="mb-6">
+          <>
+            {/* ── Recurring tasks — always pinned at top ── */}
+            {filteredRecurring.length > 0 && (
+              <div className="mb-6">
                 <div className="flex items-center gap-2 mb-3">
-                  <span className="text-xs text-[#71717a] font-semibold uppercase tracking-wider">
-                    {section.label}
-                  </span>
-                  <span className="text-xs text-[#3f3f46]">{sectionTasks.length}</span>
+                  <span className="text-xs text-[#22c55e] font-semibold uppercase tracking-wider">🔁 Recurring</span>
+                  <span className="text-xs text-[#3f3f46]">{filteredRecurring.length}</span>
                 </div>
-                {sectionTasks.map(task => (
+                {filteredRecurring.map(task => (
                   <TaskCard
                     key={task.id}
                     task={task}
@@ -136,8 +171,48 @@ export default function BacklogView() {
                   />
                 ))}
               </div>
-            )
-          })
+            )}
+
+            {/* ── Regular sections ── */}
+            {SECTIONS.map(section => {
+              const sectionTasks = filteredGrouped[section.id] || []
+              if (sectionTasks.length === 0) return null
+              return (
+                <div key={section.id} className="mb-6">
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="text-xs text-[#71717a] font-semibold uppercase tracking-wider">
+                      {section.label}
+                    </span>
+                    <span className="text-xs text-[#3f3f46]">{sectionTasks.length}</span>
+                  </div>
+                  {sectionTasks.map(task => (
+                    <TaskCard
+                      key={task.id}
+                      task={task}
+                      onComplete={handleComplete}
+                      onDelete={handleDelete}
+                      onSchedule={t => setScheduleTask(t)}
+                      onStartFocus={t => setFocusTask(t)}
+                      onEdit={t => setEditTask(t)}
+                    />
+                  ))}
+                </div>
+              )
+            })}
+
+            {/* Empty state for active filters */}
+            {filteredRecurring.length === 0 && Object.values(filteredGrouped).every(v => v.length === 0) && (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <p className="text-[#71717a] text-sm">No tasks match this filter.</p>
+                <button
+                  onClick={() => { setPriorityFilter('all'); setCategoryFilter('all') }}
+                  className="text-[#3b82f6] text-sm mt-2"
+                >
+                  Clear filters
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
 

@@ -42,6 +42,8 @@ export function useTasks() {
         priority: fields.priority || 'medium',
         estimated_minutes: fields.estimated_minutes || null,
         scheduled_date: fields.scheduled_date || null,
+        category: fields.category || null,
+        is_recurring: fields.is_recurring || false,
         subtasks: null,
       }])
       .select()
@@ -115,6 +117,34 @@ export function useTasks() {
       console.warn('Calendar update failed:', err.message)
     }
 
+    if (actualMinutes) {
+      await supabase.from('time_entries').insert([{
+        task_id: task.id,
+        started_at: new Date(now.getTime() - actualMinutes * 60000).toISOString(),
+        ended_at: now.toISOString(),
+        duration_minutes: actualMinutes,
+      }])
+    }
+
+    // Recurring tasks reset to backlog instead of being marked completed
+    if (task.is_recurring) {
+      const { data, error } = await supabase
+        .from('tasks')
+        .update({
+          status: 'backlog',
+          scheduled_date: null,
+          scheduled_start_time: null,
+          calendar_event_id: null,
+          actual_minutes: actualMinutes || null,
+        })
+        .eq('id', task.id)
+        .select()
+        .single()
+      if (error) throw error
+      dispatch({ type: 'UPDATE_TASK', payload: data })
+      return data
+    }
+
     const { data, error } = await supabase
       .from('tasks')
       .update({
@@ -127,16 +157,6 @@ export function useTasks() {
       .single()
 
     if (error) throw error
-
-    if (actualMinutes) {
-      await supabase.from('time_entries').insert([{
-        task_id: task.id,
-        started_at: new Date(now.getTime() - actualMinutes * 60000).toISOString(),
-        ended_at: now.toISOString(),
-        duration_minutes: actualMinutes,
-      }])
-    }
-
     dispatch({ type: 'UPDATE_TASK', payload: data })
     return data
   }, [dispatch])

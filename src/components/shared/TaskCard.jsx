@@ -95,6 +95,11 @@ export default function TaskCard({ task, onComplete, onDelete, onSchedule, onSta
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-[#f4f4f5] font-medium text-sm leading-snug">{task.title}</span>
 
+                {/* Recurring badge */}
+                {task.is_recurring && (
+                  <span className="text-xs px-1.5 py-0.5 rounded-full bg-[#22c55e]/15 text-[#22c55e]">🔁</span>
+                )}
+
                 {/* Rollover badge */}
                 {showRolloverBadge && (task.rollover_count || 0) > 0 && (
                   <span className={`text-xs px-1.5 py-0.5 rounded-full ${
@@ -106,6 +111,11 @@ export default function TaskCard({ task, onComplete, onDelete, onSchedule, onSta
               </div>
 
               <div className="flex items-center gap-3 mt-1 flex-wrap">
+                {task.category && (
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-[#a855f7]/15 text-[#a855f7]">
+                    {task.category}
+                  </span>
+                )}
                 {task.estimated_minutes && (
                   <span className="text-xs text-[#71717a]">{task.estimated_minutes} min</span>
                 )}
